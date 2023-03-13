@@ -1,0 +1,23 @@
+(executable
+ (name demoInterpret)
+ (modules demoInterpret)
+ (public_name demoInterpret)
+ (libraries make_lib))
+
+(executable
+ (name demoPreatyPrint)
+ (modules demoPreatyPrint)
+ (public_name demoPreatyPrint)
+ (libraries make_lib))
+
+(executable
+ (name demoParse)
+ (modules demoParse)
+ (public_name demoParse)
+ (libraries make_lib))
+
+(cram
+ (deps
+  ./demoInterpret.exe
+  ./demoPreatyPrint.exe
+  ./demoParse.exe))
