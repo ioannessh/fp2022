@@ -1,6 +1,6 @@
 (lang dune 3.6)
 
-(name Make)
+(name make)
 
 (generate_opam_files true)
 
@@ -17,7 +17,7 @@
 (homepage "https://github.com/ioannessh/fp2022")
 
 (package
- (name Make)
+ (name make)
  (synopsis "An interpreter for Make")
  (description "An interpreter for Make")
  (depends

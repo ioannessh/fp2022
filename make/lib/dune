@@ -1,6 +1,6 @@
 (library
  (name make_lib)
- (public_name Make.lib)
+ (public_name make.lib)
  (modules Graph Ast Parser Interpret Preaty_print)
  (libraries base angstrom unix core ocamlgraph graphlib)
  (preprocess
