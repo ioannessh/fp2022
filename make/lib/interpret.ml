@@ -1,6 +1,9 @@
 open Parser
 open Ast
-open Graph
+open Graphlib.Std
+open Ppx_hash_lib.Std.Hash.Builtin
+open Ppx_compare_lib.Builtin
+open Ppx_sexp_conv_lib.Conv
 
 exception NoRule of string
 exception NoRuleNeed of string * string
@@ -8,6 +11,33 @@ exception IsUpToDate of string
 exception RuleError of string * int
 exception NothingToBeDone of string
 exception AllDone
+
+module Node_impl = struct
+  module T = struct
+    type t = string [@@deriving compare, hash, sexp]
+  end
+
+  include T
+  include Core.Comparable.Make (T)
+  include Core.Hashable.Make (T)
+end
+
+module Node : sig
+  type t = string [@@deriving compare, hash, sexp]
+
+  include Core.Comparable.S with type t := t
+  include Core.Hashable.S with type t := t
+end =
+  Node_impl
+
+(*= Init Graph =*)
+module G = Graphlib.Labeled (Node) (Unit) (Unit)
+module VMap = Map.Make (Node)
+
+type dfs_state =
+  { in_tree : bool
+  ; marked_nodes : G.Node.Set.t
+  }
 
 (* Substitute variable values in string *)
 let insert_vars_values vars_map (targets_as_string : substring list) =
@@ -83,6 +113,59 @@ let fill_maps vars_map exprs =
   List.fold_left choise_decl (VMap.empty, VMap.empty) exprs
 ;;
 
+(* Fill Graph *)
+let create_vertex (map : G.node VMap.t) target =
+  match VMap.find_opt target map with
+  | None ->
+    let vertex = G.Node.create { node = target; node_label = () } in
+    let map = VMap.add target vertex map in
+    vertex, map
+  | Some vertex -> vertex, map
+;;
+
+let create_graph target_list prereqs_map =
+  let map : G.node VMap.t = VMap.empty in
+  let graph : G.t = G.empty in
+  let insert_vertex (map, graph) target =
+    let parent, map = create_vertex map target in
+    let graph = G.Node.insert parent graph in
+    let prereqs = VMap.find target prereqs_map in
+    let insert_edge (map, graph) target =
+      let child, map = create_vertex map target in
+      let graph = G.Edge.insert (G.Edge.create parent child ()) graph in
+      map, graph
+    in
+    let map, graph = List.fold_left insert_edge (map, graph) prereqs in
+    map, graph
+  in
+  List.fold_left insert_vertex (map, graph) target_list
+;;
+
+(* Traverse Graph(dfs) *)
+let dfs node graph enter_node leave_node =
+  let reachable =
+    Graphlib.fold_reachable (module G) ~init:G.Node.Set.empty ~f:G.Node.Set.add graph node
+  in
+  Graphlib.depth_first_search
+    (module G)
+    graph
+    ~start:node
+    ~start_tree:(fun node state ->
+      if G.Node.Set.mem reachable node then state else { state with in_tree = true })
+    ~init:{ in_tree = false; marked_nodes = G.Node.Set.empty }
+    ~leave_edge:(fun kind edge state ->
+      match kind with
+      | `Back ->
+        Printf.printf
+          "make: Circular %s <- %s dependency dropped.\n"
+          (G.Edge.src edge).node
+          (G.Edge.dst edge).node;
+        state
+      | _ -> state)
+    ~enter_node
+    ~leave_node
+;;
+
 (* Run rules *)
 let exec_rule rule vars_map target =
   let echo command = Sys.command (String.concat " " [ "echo"; command ]) in
@@ -102,8 +185,18 @@ let exec_rule rule vars_map target =
   List.iter choise_decl rule
 ;;
 
+let compare_time_stats_of_childs graph node =
+  let target = node.node in
+  let compare_time_stats target child =
+    (not (Sys.file_exists child))
+    || (Unix.stat child).st_mtime > (Unix.stat target).st_mtime
+  in
+  Base.Sequence.exists (G.Node.succs node graph) ~f:(fun child ->
+    compare_time_stats target child.node)
+;;
+
 let try_exec rules_map vars_map prereqs_map graph (node : G.Node.t) marked_nodes goal =
-  let target = node.node.name in
+  let target = node.node in
   let vars_map = VMap.update "@" (fun _ -> Some target) vars_map in
   let self_prerequisites =
     match VMap.find_opt target prereqs_map with
