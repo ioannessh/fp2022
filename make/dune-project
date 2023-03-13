@@ -22,17 +22,16 @@
  (description "An interpreter for Make")
  (depends
   ocaml
-  graphlib
   dune
   angstrom
   core
-  unix
   (ppx_inline_test :with-test)
   qcheck-core
   ppx_expect
   ppx_deriving
   ppx_sexp_conv
   ppx_hash
+  graphlib
   ppx_compare
   ppx_assert
   (odoc :with-doc)
