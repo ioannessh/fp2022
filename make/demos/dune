@@ -5,9 +5,9 @@
  (libraries make_lib))
 
 (executable
- (name demoPreatyPrint)
- (modules demoPreatyPrint)
- (public_name demoPreatyPrint)
+ (name demoPrettyPrint)
+ (modules demoPrettyPrint)
+ (public_name demoPrettyPrint)
  (libraries make_lib))
 
 (executable
