@@ -94,7 +94,7 @@ let set_rules targets rules map =
 let set_prereqs targets prereqs map =
   let set_prereq map target =
     if VMap.mem target map
-    then VMap.update target (fun l -> Some (List.concat [ prereqs; Option.get l ])) map
+    then VMap.update target (fun l -> Some (List.append prereqs (Option.get l))) map
     else VMap.add target prereqs map
   in
   List.fold_left set_prereq map targets
@@ -167,8 +167,7 @@ let dfs node graph enter_node leave_node =
 ;;
 
 (* Run rules *)
-let exec_rule rule vars_map target =
-  let echo command = Sys.command (String.concat " " [ "echo"; command ]) in
+let exec_rule rule vars_map target = 
   let choise_decl str =
     let command = insert_vars_values vars_map str in
     let retcode =
@@ -177,7 +176,7 @@ let exec_rule rule vars_map target =
         let command = String.mapi (fun i c1 -> if 0 = i then ' ' else c1) command in
         Sys.command command)
       else (
-        let _ = echo command in
+        print_endline command;
         Sys.command command)
     in
     if retcode <> 0 then raise (RuleError (target, retcode)) else ()
