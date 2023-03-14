@@ -167,7 +167,7 @@ let dfs node graph enter_node leave_node =
 ;;
 
 (* Run rules *)
-let exec_rule rule vars_map target = 
+let exec_rule rule vars_map target =
   let choise_decl str =
     let command = insert_vars_values vars_map str in
     let retcode =
