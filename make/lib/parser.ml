@@ -1,3 +1,7 @@
+(** Copyright 2022-2023, ioannessh and contributors *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 open Angstrom
 open Ast
 
@@ -56,7 +60,8 @@ let some_pred preds el = List.exists (fun f -> f el) preds
 let multy_string =
   many
     (take_while (all_pred [ not_newline; not_backslash; not_colon; not_hash ])
-    <* string "\\n")
+    <* char '\\'
+    <* char '\n')
 ;;
 
 let simple_string pre sep =
@@ -143,9 +148,18 @@ let prerequisites_declaration =
 
 (* Command *)
 let command_string =
-  let concat_list a b _ = List.append a (List.concat b) in
+  let add_end_str c a = List.append a [ STR c ] in
+  let concat_list a b _ =
+    let a = if List.length b = 0 then add_end_str "" a else add_end_str "\\\n" a in
+    let b =
+      List.mapi (fun i -> add_end_str (if List.length b = i then "\\\n" else "")) b
+    in
+    List.append a (List.concat b)
+  in
   let multy_string =
-    string "\\n" *> take_while (all_pred [ not_backslash; not_newline; not_hash ])
+    char '\\'
+    *> char '\n'
+    *> take_while (all_pred [ not_backslash; not_newline; not_hash ])
   in
   let start_string =
     char '\t' *> take_while1 (all_pred [ not_backslash; not_newline; not_hash ])
@@ -231,6 +245,7 @@ let%test _ = parse_ok "$(a) " [ VAR "a"; STR " " ]
 let%test _ = parse_ok "$a " [ VAR "a"; STR " " ]
 let%test _ = parse_ok " $(a)" [ STR " "; VAR "a" ]
 let%test _ = parse_ok " b " [ STR " b " ]
+let%test _ = parse_ok " \\n " [ STR " \\n " ]
 let%test _ = parse_ok "" []
 let%test _ = parse_fail "$(a)" (* MUST BE FIXED *)
 let%test _ = parse_fail "bb$"
@@ -247,9 +262,10 @@ let%test _ = parse_fail "a b"
 let%test _ = parse_fail ":"
 let%test _ = parse_fail ""
 (* Multy string *)
-let%test _ = parse_ok "a\\nb:" "a b"
-let%test _ = parse_ok "a\\nb\\nc:" "a b c"
-let%test _ = parse_ok "a\\n\\nc:" "a  c"
+let%test _ = parse_ok "a\\\nb:" "a b"
+let%test _ = parse_ok "a\\\nb\\\nc:" "a b c"
+let%test _ = parse_ok "a\\\n\tb:" "a \tb"
+let%test _ = parse_ok "a\\\n\\\nc:" "a  c"
 
 (*====================================*)
 (*== Test prerequisites_declaration ==*)
@@ -263,9 +279,9 @@ let%test _ = parse_ok "a b" "a b"
 let%test _ = parse_ok "\n" ""
 let%test _ = parse_ok "" ""
 (* Multy string *)
-let%test _ = parse_ok "a\\nb\n" "a b"
-let%test _ = parse_ok "a\\nb\\nc\n" "a b c"
-let%test _ = parse_ok "a\\n\\nc\n" "a  c"
+let%test _ = parse_ok "a\\\nb\n" "a b"
+let%test _ = parse_ok "a\\\nb\\\nc\n" "a b c"
+let%test _ = parse_ok "a\\\n\\\nc\n" "a  c"
 
 (*===============================*)
 (*== Test commands_declaration ==*)
@@ -274,23 +290,33 @@ let parse_ok = test_ok commands_declaration
 let parse_fail = test_fail commands_declaration
 
 (* Simple string *)
-let%test _ = parse_ok "\ta" [ [ STR "a" ] ]
-let%test _ = parse_ok "\ta\n\n\n" [ [ STR "a" ] ]
-let%test _ = parse_ok "\t$a " [ [ VAR "a"; STR " " ] ]
-let%test _ = parse_ok "\ta$(b)" [ [ STR "a"; VAR "b" ] ]
-let%test _ = parse_ok "\ta\n" [ [ STR "a" ] ]
-let%test _ = parse_ok "\ta\n\ta" [ [ STR "a" ]; [ STR "a" ] ]
-let%test _ = parse_ok "\ta\n\n\ta" [ [ STR "a" ]; [ STR "a" ] ]
+let%test _ = parse_ok "\ta" [ [ STR "a"; STR "" ] ]
+let%test _ = parse_ok "\ta\n\n\n" [ [ STR "a"; STR "" ] ]
+let%test _ = parse_ok "\t$a " [ [ VAR "a"; STR " "; STR "" ] ]
+let%test _ = parse_ok "\ta$(b)" [ [ STR "a"; VAR "b"; STR "" ] ]
+let%test _ = parse_ok "\ta\n" [ [ STR "a"; STR "" ] ]
+let%test _ = parse_ok "\ta\n\ta" [ [ STR "a"; STR "" ]; [ STR "a"; STR "" ] ]
+let%test _ = parse_ok "\ta\n\n\ta" [ [ STR "a"; STR "" ]; [ STR "a"; STR "" ] ]
 let%test _ = parse_fail "\ta\na"
 let%test _ = parse_fail "a"
 let%test _ = parse_fail "\t\n"
 let%test _ = parse_fail "\t\\n"
 (* Multy string *)
-let%test _ = parse_ok "\tab\\nb" [ [ STR "ab"; STR "b" ] ]
-let%test _ = parse_ok "\tab\\n\tb" [ [ STR "ab"; STR "\tb" ] ]
-let%test _ = parse_ok "\tab\\n\tb\n" [ [ STR "ab"; STR "\tb" ] ]
-let%test _ = parse_ok "\tab\\n\tb\n\ta" [ [ STR "ab"; STR "\tb" ]; [ STR "a" ] ]
-let%test _ = parse_ok "\ta\\nb\n\n\ta" [ [ STR "a"; STR "b" ]; [ STR "a" ] ]
+let%test _ = parse_ok "\tab\\\nb" [ [ STR "ab"; STR "\\\n"; STR "b"; STR "" ] ]
+let%test _ = parse_ok "\tab\\\n\tb" [ [ STR "ab"; STR "\\\n"; STR "\tb"; STR "" ] ]
+let%test _ = parse_ok "\tab\\\n\tb\n" [ [ STR "ab"; STR "\\\n"; STR "\tb"; STR "" ] ]
+
+let%test _ =
+  parse_ok
+    "\tab\\\n\tb\n\ta"
+    [ [ STR "ab"; STR "\\\n"; STR "\tb"; STR "" ]; [ STR "a"; STR "" ] ]
+;;
+
+let%test _ =
+  parse_ok
+    "\ta\\\nb\n\n\ta"
+    [ [ STR "a"; STR "\\\n"; STR "b"; STR "" ]; [ STR "a"; STR "" ] ]
+;;
 
 (*==========================*)
 (*== Test var_declaration ==*)
@@ -312,3 +338,30 @@ let%test _ = parse_fail ";=10"
 
 (*=============================*)
 (*== Test meaningless_string ==*)
+
+(*=================*)
+(*== Test Parser ==*)
+
+let parse_ok = test_ok exprs
+
+let%test _ =
+  parse_ok
+    "a\\\nb : s\\\ns2\n\techo a\\\n\tb"
+    [ RULE
+        { targets = "a b "
+        ; prerequisites = " s s2"
+        ; commands = [ [ STR "echo a"; STR "\\\n"; STR "\tb"; STR "" ] ]
+        }
+    ]
+;;
+
+let%test _ =
+  parse_ok
+    "a\\\nb : s\\\ns2\n\techo a\\\nb"
+    [ RULE
+        { targets = "a b "
+        ; prerequisites = " s s2"
+        ; commands = [ [ STR "echo a"; STR "\\\n"; STR "b"; STR "" ] ]
+        }
+    ]
+;;
