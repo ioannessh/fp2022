@@ -1,3 +1,7 @@
+(** Copyright 2022-2023, ioannessh and contributors *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 open Parser
 open Ast
 open Graphlib.Std
@@ -156,7 +160,7 @@ let dfs node graph enter_node leave_node =
     ~leave_edge:(fun kind edge state ->
       match kind with
       | `Back ->
-        Printf.printf
+        Printf.eprintf
           "make: Circular %s <- %s dependency dropped.\n"
           (G.Edge.src edge).node
           (G.Edge.dst edge).node;
@@ -210,10 +214,12 @@ let try_exec rules_map vars_map prereqs_map graph (node : G.Node.t) marked_nodes
     G.Node.Set.add marked_nodes node)
   else if Sys.file_exists target
   then
-    if target = goal
+    if compare_time_stats_of_childs graph node
+    then (
+      exec_rule (VMap.find target rules_map) vars_map target;
+      G.Node.Set.add marked_nodes node)
+    else if target = goal
     then raise (IsUpToDate target)
-    else if compare_time_stats_of_childs graph node
-    then G.Node.Set.add marked_nodes node
     else marked_nodes
   else (
     match VMap.find_opt target rules_map with
@@ -260,10 +266,10 @@ let exec_exprs exprs main_targets =
   with
   | NoRule target ->
     Printf.eprintf "make: *** No rule to make target `%s`. Stop.\n" target
-  | IsUpToDate target -> Printf.eprintf "make: `%s` is up to date.\n" target
+  | IsUpToDate target -> Printf.printf "make: `%s` is up to date.\n" target
   | RuleError (err, retcode) ->
     Printf.eprintf "make: *** [Makefile: %s] Error %d\n" err retcode
-  | NothingToBeDone target -> Printf.eprintf "make: Nothing to be done for `%s`.\n" target
+  | NothingToBeDone target -> Printf.printf "make: Nothing to be done for `%s`.\n" target
   | NoRuleNeed (prereq, goal) ->
     Printf.eprintf "No rule to make target `%s`, needed by `%s`.\n" prereq goal
   | AllDone -> ()
@@ -278,7 +284,12 @@ let interpret input targets =
   | Error e -> print_string e
 ;;
 
-let array_to_list xs = Array.fold_right List.cons xs []
+let args_list xs =
+  let list = Array.fold_right List.cons xs [] in
+  match list with
+  | _ :: args -> args
+  | _ -> []
+;;
 
 (*=============================*)
 (*============TESTS============*)
