@@ -6,8 +6,7 @@ open Ast
 
 let rec pretty_print_parser exprs =
   let rec print_command command_string =
-    let print_substr substr =
-      match substr with
+    let print_substr = function
       | STR s -> Printf.printf "%s" s
       | VAR v ->
         (match v with
@@ -28,8 +27,7 @@ let rec pretty_print_parser exprs =
       print_commands commands
     | [] -> Printf.printf "\n"
   in
-  let choice_print expr =
-    match expr with
+  let choice_print = function
     | RULE rule ->
       Printf.printf "%s:%s\n" rule.targets rule.prerequisites;
       print_commands rule.commands

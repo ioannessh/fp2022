@@ -50,8 +50,7 @@ let insert_vars_values vars_map (targets_as_string : substring list) =
     | None -> ""
     | Some s -> s
   in
-  let get_str substr =
-    match substr with
+  let get_str = function
     | STR s -> s
     | VAR v -> var_value v
   in
@@ -71,8 +70,7 @@ let fill_var_map vars_map exprs =
     then VMap.update name (fun _ -> Some value) map
     else VMap.add name value map
   in
-  let choise_decl map expr =
-    match expr with
+  let choise_decl map = function
     | RULE _ -> map
     | VAR_DEC (name, value) -> set_var name value map
   in
@@ -107,8 +105,7 @@ let set_prereqs targets prereqs map =
 let fill_maps vars_map exprs =
   let targets rule = words_parser (insert_vars vars_map rule.targets) in
   let prerequisites rule = words_parser (insert_vars vars_map rule.prerequisites) in
-  let choise_decl (rules_map, prereqs_map) expr =
-    match expr with
+  let choise_decl (rules_map, prereqs_map) = function
     | RULE rule ->
       ( set_rules (targets rule) rule.commands rules_map
       , set_prereqs (targets rule) (prerequisites rule) prereqs_map )

@@ -150,7 +150,11 @@ let prerequisites_declaration =
 let command_string =
   let add_end_str c a = List.append a [ STR c ] in
   let concat_list a b _ =
-    let a = if List.length b = 0 then add_end_str "" a else add_end_str "\\\n" a in
+    let a =
+      match b with
+      | [] -> add_end_str "" a
+      | _ -> add_end_str "\\\n" a
+    in
     let b =
       List.mapi (fun i -> add_end_str (if List.length b = i then "\\\n" else "")) b
     in
