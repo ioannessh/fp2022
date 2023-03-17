@@ -1,8 +1,0 @@
-echo ab
-ab
-echo ba = ba
-ba = ba
-echo ab : ba
-ab : ba
-echo ba = ba
-ba = ba

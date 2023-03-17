@@ -1,7 +1,0 @@
-cat fds
-touch upToDate
-make: `upToDate` is up to date.
-make: Nothing to be done for `is_up_to_date`.
-touch upToDate
-make: Nothing to be done for `is_up_to_date`.
-make: Nothing to be done for `nothing_to_do`.

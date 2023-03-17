@@ -1,7 +1,0 @@
-cat fds
-touch upToDate
-make: «upToDate» не требует обновления.
-make: Цель «is_up_to_date» не требует выполнения команд.
-touch upToDate
-make: Цель «is_up_to_date» не требует выполнения команд.
-make: Цель «nothing_to_do» не требует выполнения команд.
