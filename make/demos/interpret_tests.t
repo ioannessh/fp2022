@@ -127,45 +127,30 @@ Test errors
 Test timestamp
   $ cd ../timestat
   $ touch t1; touch t2; touch t3
-  $ make --no-print-directory > f1
-  $ make --no-print-directory t3s >/dev/null
-  $ echo - >> f1
-  $ 
-  $ touch t3
-  $ make --no-print-directory t3s >> f1
-  $ echo - >> f1
-  $ 
-  $ touch t3
-  $ make --no-print-directory >> f1
-  $ echo - >> f1
-  $ 
-  $ rm t3s
-  $ make --no-print-directory >> f1
-  $ echo - >> f1
-  $ 
-  $ rm all
-  $ make --no-print-directory >> f1
-
-  $ touch t1; touch t2; touch t3
-  $ rm -f t3s all
-  $ demoInterpret > f2
+  $ demoInterpret
+  touch t3s
+  touch all
   $ demoInterpret t3s
   make: `t3s` is up to date.
-  $ echo - >> f2
   $ 
   $ touch t3
-  $ demoInterpret t3s >> f2
-  $ echo - >> f2
+  $ demoInterpret t3s
+  touch t3s
   $ 
   $ touch t3
-  $ demoInterpret >> f2
-  $ echo - >> f2
+  $ demoInterpret
+  touch t3s
+  touch all
   $ 
   $ rm t3s
-  $ demoInterpret >> f2
-  $ echo - >> f2
+  $ demoInterpret
+  touch t3s
+  touch all
   $ 
-  $ rm all >> f2
-  $ demoInterpret >> f2
-  $ 
-  $ diff f1 f2
+  $ rm all
+  $ demoInterpret
+  touch all
+  $ touch t1
+  $ demoInterpret
+  touch all
+
